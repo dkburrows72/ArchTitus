@@ -92,6 +92,16 @@ if [[ "${FS}" == "btrfs" ]]; then
     mkfs.vfat -F32 -n "EFIBOOT" ${partition2}
     mkfs.btrfs -L ROOT ${partition3} -f
     mount -t btrfs ${partition3} /mnt
+    createsubvolumes
+    umount /mnt
+    # mount @ subvolume
+    mount -o ${mountoptions},subvol=@ /dev/mapper/ROOT /mnt
+    # make directories home, .snapshots, var, tmp
+    mkdir -p /mnt/{home,var,tmp,.snapshots}
+    # mount subvolumes
+    mountallsubvol
+    # store uuid of encrypted partition for grub
+    echo encryped_partition_uuid=$(blkid -s UUID -o value ${partition3}) >> setup.conf
 elif [[ "${FS}" == "ext4" ]]; then
     mkfs.vfat -F32 -n "EFIBOOT" ${partition2}
     mkfs.ext4 -L ROOT ${partition3}
@@ -119,12 +129,12 @@ elif [[ "${FS}" == "luks" ]]; then
 fi
 
 # checking if user selected btrfs
-if [[ ${FS} =~ "btrfs" ]]; then
-ls /mnt | xargs btrfs subvolume delete
-btrfs subvolume create /mnt/@
-umount /mnt
-mount -t btrfs -o subvol=@ -L ROOT /mnt
-fi
+# if [[ ${FS} =~ "btrfs" ]]; then
+# ls /mnt | xargs btrfs subvolume delete
+# btrfs subvolume create /mnt/@
+# umount /mnt
+# mount -t btrfs -o subvol=@ -L ROOT /mnt
+# fi
 
 # mount target
 mkdir /mnt/boot
